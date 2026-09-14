@@ -33,7 +33,7 @@ This notebook is the full protocol: same seeds, same attempt budget, same Morgan
 
 1. Both generators run end-to-end and emit valid molecules.
 2. Kept analogs (Tanimoto ≥ 0.40 to the seed) are ranked by ΔQED.
-3. The quantum piece is a real PennyLane circuit (`StronglyEntanglingLayers` on `default.qubit`) whose Born probabilities steer analog decoding.
+3. The quantum piece is a real PennyLane circuit (6-qubit `Rot` + ring `CNOT` ansatz on `default.qubit`) whose Born probabilities steer analog decoding.
 """
 )
 
@@ -144,7 +144,7 @@ The protocol equalizes **budget and filters**. It does not pretend the two induc
 md(
     r"""## 3. The quantum circuit (6 qubits)
 
-`qml.StronglyEntanglingLayers` — rotation angles + entangling CNOTs, 4 layers. The Born machine output is a probability table over \(2^6 = 64\) bitstrings. That is small enough for an exact statevector simulator and large enough to be a real variational circuit, not a coin flip in disguise.
+`Rot` on each wire plus a ring of `CNOT`s, repeated for 4 layers (the usual strongly-entangling pattern). The Born machine output is a probability table over \(2^6 = 64\) bitstrings. That is small enough for an exact statevector simulator and large enough to be a real variational circuit, not a coin flip in disguise.
 """
 )
 
@@ -156,7 +156,7 @@ print(qml.draw(circuit, max_length=120)(params)[:1800])
 print("parameter tensor", np.shape(params), "n_params", int(np.size(params)))
 
 fig, ax = qml.draw_mpl(circuit, decimals=None)(params)
-ax.set_title("QCBM ansatz — StronglyEntanglingLayers (6 wires, 4 layers)")
+ax.set_title("QCBM ansatz — Rot + ring CNOTs (6 wires, 4 layers)")
 viz.savefig(fig, "qcbm_circuit.png")
 display(fig)
 plt.close(fig)
@@ -236,7 +236,7 @@ plt.close(fig)
 md(
     """## 7. Molecule grids — seed vs top kept analogs
 
-Each row: seed | top-3 classical by ΔQED | top-3 hybrid by ΔQED. Legends show ΔQED and Tanimoto to the seed. Placeholders appear only when a method failed to keep three analogs — that is informative.
+Each panel is stacked: **seed** (top), **top-3 classical by ΔQED**, **top-3 hybrid by ΔQED**. If a method has no analog with Tanimoto ≥ 0.40, the row says so instead of inventing a structure.
 """
 )
 

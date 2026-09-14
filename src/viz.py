@@ -4,11 +4,13 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import io
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from rdkit.Chem import Draw
+from PIL import Image, ImageDraw
+from rdkit.Chem.Draw import rdMolDraw2D
 
 from .chemistry import mol_from_smiles
 from .config import FIGURE_DIR
@@ -28,6 +30,19 @@ def setup_style() -> None:
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _grid_to_pil(mols, legends, mols_per_row: int, sub_img_size=(160, 140)) -> Image.Image:
+    mols = list(mols)
+    legends = list(legends)
+    n = max(len(mols), 1)
+    ncols = max(mols_per_row, 1)
+    nrows = int(np.ceil(n / ncols))
+    w, h = sub_img_size
+    drawer = rdMolDraw2D.MolDraw2DCairo(ncols * w, nrows * h, w, h)
+    drawer.DrawMolecules(mols, legends=legends)
+    drawer.FinishDrawing()
+    return Image.open(io.BytesIO(drawer.GetDrawingText())).convert("RGB")
+
+
 def savefig(fig: plt.Figure, name: str) -> Path:
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)
     path = FIGURE_DIR / name
@@ -43,7 +58,7 @@ def plot_gru_loss(losses: list[float], extra: dict[str, list[float]] | None = No
             ax.plot(np.arange(1, len(vals) + 1), vals, lw=1.4, alpha=0.85, label=f"ft {seed_name}")
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Token NLL")
-    ax.set_title("Classical SMILES GRU training")
+    ax.set_title("Classical SELFIES GRU training")
     ax.legend(frameon=False, fontsize=8, ncol=2)
     fig.tight_layout()
     return fig
@@ -145,36 +160,50 @@ def molecule_grid(
     classical: MethodResult,
     hybrid: MethodResult,
     k: int = 3,
-):
-    mols = [seed.mol]
-    legends = [f"SEED\n{seed.name}\nQED {seed.qed:.3f}"]
-    for label, res in (("classical", classical), ("hybrid", hybrid)):
-        tops = top_kept(res, k=k)
-        for i, c in enumerate(tops, 1):
-            mols.append(mol_from_smiles(c.smiles))
-            legends.append(
-                f"{label} #{i}\nΔQED {c.delta_qed:+.3f}\nTc {c.tanimoto:.2f}"
+) -> Image.Image:
+    """Stack seed / classical / hybrid rows so legends stay readable."""
+
+    def _row(title: str, recs: list) -> Image.Image:
+        if not recs:
+            img = Image.new("RGB", (k * 220, 88), "white")
+            ImageDraw.Draw(img).text(
+                (12, 36),
+                f"{title}: no kept analogs at Tanimoto >= 0.40",
+                fill=(80, 80, 80),
             )
-        for _ in range(k - len(tops)):
-            mols.append(mol_from_smiles("C"))
-            legends.append(f"{label}\n(no kept)")
-    img = Draw.MolsToGridImage(
-        mols,
-        molsPerRow=1 + 2 * k,
-        subImgSize=(160, 140),
-        legends=legends,
-        useSVG=False,
+            return img
+        mols = [mol_from_smiles(c.smiles) for c in recs]
+        legends = [
+            f"{title} #{i}\nΔQED {c.delta_qed:+.3f}  Tc {c.tanimoto:.2f}\nQED {c.qed:.3f}"
+            for i, c in enumerate(recs, 1)
+        ]
+        return _grid_to_pil(mols, legends, mols_per_row=max(len(mols), 1), sub_img_size=(220, 200))
+
+    seed_img = _grid_to_pil(
+        [seed.mol],
+        [f"SEED  {seed.name}\nQED {seed.qed:.3f}  SA {seed.sa:.2f}"],
+        mols_per_row=1,
+        sub_img_size=(240, 210),
     )
-    return img
+    c_img = _row("classical", top_kept(classical, k=k))
+    h_img = _row("hybrid", top_kept(hybrid, k=k))
+    width = max(seed_img.width, c_img.width, h_img.width)
+    gap = 8
+    height = seed_img.height + c_img.height + h_img.height + 2 * gap
+    canvas = Image.new("RGB", (width, height), "white")
+    y = 0
+    for part in (seed_img, c_img, h_img):
+        canvas.paste(part, (0, y))
+        y += part.height + gap
+    return canvas
 
 
 def save_seed_grid(seeds: list[MoleculeRecord]) -> Path:
-    img = Draw.MolsToGridImage(
+    img = _grid_to_pil(
         [s.mol for s in seeds],
-        molsPerRow=3,
-        subImgSize=(200, 160),
-        legends=[f"{s.name}\nQED {s.qed:.3f}  SA {s.sa:.2f}" for s in seeds],
-        useSVG=False,
+        [f"{s.name}\nQED {s.qed:.3f}  SA {s.sa:.2f}" for s in seeds],
+        mols_per_row=3,
+        sub_img_size=(200, 160),
     )
     path = FIGURE_DIR / "seeds.png"
     FIGURE_DIR.mkdir(parents=True, exist_ok=True)

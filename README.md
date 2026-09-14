@@ -40,7 +40,7 @@ Goal-directedness is classical and explicit:
 
 ### Hybrid quantum-classical — 6-qubit QCBM + analog decode
 
-A **quantum circuit Born machine** (parameterized `StronglyEntanglingLayers` in PennyLane `default.qubit`) models a 6-bit latent distribution over the seed neighborhood:
+A **quantum circuit Born machine** (6-qubit parameterized `Rot` + ring-`CNOT` layers in PennyLane `default.qubit`) models a 6-bit latent distribution over the seed neighborhood:
 
 1. Compress 2048-bit Morgan fingerprints of the public library with PCA → 6 bits
 2. Reweight the empirical bitstrings of the seed’s top-40 neighbors by QED (and similarity)
@@ -102,6 +102,34 @@ PYTHONPATH=. python -c "from src.protocol import run_bakeoff; run_bakeoff()"
 ```
 
 Wall-clock on a laptop / small VM: a few minutes (GRU pretrain dominates; the 6-qubit QCBM is cheap).
+
+---
+
+## Snapshot from the committed notebook
+
+Locked protocol: 160 attempts / method / seed, Morgan Tanimoto ≥ 0.40, public ~1k-drug corpus.
+
+| Method | Validity | Uniqueness | Novelty | Mean kept / seed | Mean Tc (kept) | Mean ΔQED (kept) | Frac. improved |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Classical SELFIES-GRU | 100% | 0.62 | 0.61 | 22.2 | 0.52 | +0.009 | 0.59 |
+| Hybrid 6-qubit QCBM | 100% | 0.36 | 0.35 | 11.3 | 0.55 | +0.016 | 0.63 |
+
+Both generators are chemically valid (SELFIES decode vs constrained analog decode). The GRU explores more unique strings; the QCBM stays slightly closer to the seed and shows a higher fraction of QED wins among kept analogs. **Caffeine is the tell:** the GRU keep-set is empty (prefix completion left the xanthine neighborhood), while the QCBM still returns local analogs. Ibuprofen (already QED 0.82) is a ceiling check — mean ΔQED goes slightly negative for both.
+
+<p align="center">
+  <img src="figures/seeds.png" alt="Six public drug seeds with QED and SA" width="720" />
+</p>
+<p align="center">
+  <img src="figures/delta_qed_by_seed.png" alt="Mean delta QED by seed for both methods" width="720" />
+</p>
+<p align="center">
+  <img src="figures/similarity_vs_delta_qed.png" alt="Tanimoto vs delta QED scatter of kept candidates" width="720" />
+</p>
+<p align="center">
+  <img src="figures/qcbm_kl_loss.png" alt="QCBM KL training curves per seed" width="640" />
+</p>
+
+Full molecule grids, the QCBM circuit drawing, and per-seed tables live in `notebooks/goal_directed_mol_gen_bakeoff.ipynb` (pre-executed) and `figures/`.
 
 ---
 

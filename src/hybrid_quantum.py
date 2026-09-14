@@ -104,11 +104,21 @@ def target_distribution(
 
 
 def make_qcbm(n_qubits: int = N_QUBITS, n_layers: int = QCBM_LAYERS):
+    """Explicit strongly-entangling ansatz (Rot + ring of CNOTs)."""
     dev = qml.device("default.qubit", wires=n_qubits)
 
     @qml.qnode(dev, interface="autograd")
     def probs(params):
-        qml.StronglyEntanglingLayers(params, wires=range(n_qubits))
+        for layer in range(n_layers):
+            for wire in range(n_qubits):
+                qml.Rot(
+                    params[layer, wire, 0],
+                    params[layer, wire, 1],
+                    params[layer, wire, 2],
+                    wires=wire,
+                )
+            for wire in range(n_qubits):
+                qml.CNOT(wires=[wire, (wire + 1) % n_qubits])
         return qml.probs(wires=range(n_qubits))
 
     return probs

@@ -124,6 +124,22 @@ def run_bakeoff(
     agg = aggregate_table(df)
     df.to_csv(FIGURE_DIR / "metrics_by_seed.csv", index=False)
     agg.to_csv(FIGURE_DIR / "metrics_aggregate.csv", index=False)
+    kept_rows = []
+    for res in results:
+        for c in res.kept_cands:
+            kept_rows.append(
+                {
+                    "seed": res.seed_name,
+                    "method": res.method,
+                    "smiles": c.smiles,
+                    "tanimoto": c.tanimoto,
+                    "qed": c.qed,
+                    "delta_qed": c.delta_qed,
+                    "sa": c.sa,
+                    "novel": c.novel,
+                }
+            )
+    pd.DataFrame(kept_rows).to_csv(FIGURE_DIR / "kept_candidates.csv", index=False)
     return {
         "seeds": seeds,
         "library": library,
