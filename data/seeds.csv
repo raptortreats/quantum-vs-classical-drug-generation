@@ -1,0 +1,7 @@
+name,smiles,source
+isoniazid,NNC(=O)c1ccncc1,"Public FDA-approved structure; SMILES from HIPS/molecule-autoencoder all_drugs.smi (Gómez-Bombarelli et al. lineage, GitHub)"
+aspirin,CC(=O)Oc1ccccc1C(=O)O,"Public FDA-approved structure (acetylsalicylic acid); SMILES from HIPS/molecule-autoencoder all_drugs.smi"
+caffeine,Cn1c(=O)c2c(ncn2C)n(C)c1=O,"Public FDA-approved / GRAS xanthine; SMILES from HIPS/molecule-autoencoder all_drugs.smi"
+acetaminophen,CC(=O)Nc1ccc(O)cc1,"Public FDA-approved structure (paracetamol); SMILES from HIPS/molecule-autoencoder all_drugs.smi"
+sulfanilamide,Nc1ccc(S(N)(=O)=O)cc1,"Public sulfonamide antibacterial; SMILES from HIPS/molecule-autoencoder all_drugs.smi"
+ibuprofen,CC(C)Cc1ccc(C(C)C(=O)O)cc1,"Public FDA-approved NSAID; SMILES from HIPS/molecule-autoencoder all_drugs.smi"
